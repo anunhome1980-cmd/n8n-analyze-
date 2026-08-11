@@ -1,0 +1,473 @@
+{
+  "name": "Telegram Excel Analysis & AI Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "357aa039-9d69-4d9c-a04f-e2038a799d63",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "3daca66f-d9ea-413b-bd03-8c9dbb3a10f8",
+      "credentials": {
+        "telegramApi": {
+          "id": "p62yvUnqpIVPoXOx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "or",
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-xlsx",
+              "leftValue": "={{ $json.message.document.file_name }}",
+              "rightValue": ".xlsx",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            },
+            {
+              "id": "is-xls",
+              "leftValue": "={{ $json.message.document.file_name }}",
+              "rightValue": ".xls",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            },
+            {
+              "id": "is-csv",
+              "leftValue": "={{ $json.message.document.file_name }}",
+              "rightValue": ".csv",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Has Document",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Please send me a spreadsheet file as a document — Excel (.xlsx, .xls) or CSV (.csv) — and I'll analyse it for you.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Ask For File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        336
+      ],
+      "webhookId": "a1b2c3d4-0003-4000-8000-000000000003",
+      "credentials": {
+        "telegramApi": {
+          "id": "p62yvUnqpIVPoXOx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "65140b81-3c15-4d20-b062-906f34ec7a1d",
+      "name": "Download File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        112
+      ],
+      "webhookId": "b8463ae5-c059-47b4-b266-00a090cb12aa",
+      "credentials": {
+        "telegramApi": {
+          "id": "p62yvUnqpIVPoXOx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "csv-check",
+              "leftValue": "={{ $('Telegram Trigger').item.json.message.document.file_name }}",
+              "rightValue": ".csv",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c2d3e4f5-0001-4000-8000-000000000010",
+      "name": "Is CSV",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "headerRow": true
+        }
+      },
+      "id": "c2d3e4f5-0002-4000-8000-000000000011",
+      "name": "Parse CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {
+          "headerRow": true
+        }
+      },
+      "id": "51888e22-4026-4213-bac8-9606ae2768cd",
+      "name": "Parse Excel",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# Placeholder ML / analysis step (native Python runner).\n# Detects missing values, duplicates, outliers and summary statistics.\n# NOTE: native Python uses _items (all-items mode) and bracket access.\nrows = []\nfor item in _items:\n    j = item[\"json\"]\n    rows.append(dict(j))\n\ncolumns = []\nfor r in rows:\n    for k in r.keys():\n        if k not in columns:\n            columns.append(k)\n\ntotal_rows = len(rows)\n\n# Missing values per column\nmissing = {}\nfor c in columns:\n    cnt = 0\n    for r in rows:\n        v = r.get(c, None)\n        if v is None or (isinstance(v, str) and v.strip() == \"\"):\n            cnt += 1\n    missing[c] = cnt\n\n# Duplicate rows (full-row match)\nseen = []\ndup_count = 0\nfor r in rows:\n    key = tuple((c, r.get(c, None)) for c in columns)\n    if key in seen:\n        dup_count += 1\n    else:\n        seen.append(key)\n\ndef to_num(v):\n    if isinstance(v, bool):\n        return None\n    if isinstance(v, (int, float)):\n        return float(v)\n    if isinstance(v, str):\n        s = v.strip().replace(\",\", \"\")\n        try:\n            return float(s)\n        except Exception:\n            return None\n    return None\n\ndef percentile(sorted_vals, p):\n    n = len(sorted_vals)\n    if n == 1:\n        return sorted_vals[0]\n    idx = p * (n - 1)\n    lo = int(idx)\n    hi = min(lo + 1, n - 1)\n    frac = idx - lo\n    return sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * frac\n\nsummary = {}\noutliers = {}\nfor c in columns:\n    nums = []\n    for r in rows:\n        num = to_num(r.get(c, None))\n        if num is not None:\n            nums.append(num)\n    # treat as numeric column only if at least half the rows parse as numbers\n    if len(nums) >= 1 and len(nums) >= (total_rows / 2.0):\n        srt = sorted(nums)\n        n = len(srt)\n        mean = sum(srt) / n\n        q1 = percentile(srt, 0.25)\n        q3 = percentile(srt, 0.75)\n        iqr = q3 - q1\n        lower = q1 - 1.5 * iqr\n        upper = q3 + 1.5 * iqr\n        out = [x for x in nums if x < lower or x > upper]\n        summary[c] = {\n            \"count\": n,\n            \"min\": round(srt[0], 4),\n            \"max\": round(srt[-1], 4),\n            \"mean\": round(mean, 4),\n            \"median\": round(percentile(srt, 0.5), 4),\n        }\n        outliers[c] = len(out)\n\nresult = {\n    \"total_rows\": total_rows,\n    \"columns\": columns,\n    \"missing_values\": missing,\n    \"total_missing\": sum(missing.values()),\n    \"duplicate_rows\": dup_count,\n    \"numeric_summary\": summary,\n    \"outliers\": outliers,\n    \"chart_labels\": columns,\n    \"chart_values\": [missing[c] for c in columns],\n}\n\nreturn [{\"json\": result}]\n"
+      },
+      "id": "90327359-2f9f-4e22-8d79-c17beabb79a4",
+      "name": "Analyze Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are given a data-quality analysis of a spreadsheet file a user sent via Telegram. Analysis JSON:\n{{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "systemMessage": "You are a data analyst assistant. Write a concise, friendly Telegram reply summarising the spreadsheet file analysis. Cover: an overview (row and column counts), data quality issues (missing values, duplicate rows, outliers), key summary statistics for numeric columns, and 1-2 practical recommendations. Keep it under 1500 characters. Use plain text only — do NOT use the characters <, > or & or any HTML/Markdown tags."
+        }
+      },
+      "id": "50bb6bfa-110c-490f-840e-764c0bf6a3d1",
+      "name": "Generate Summary",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1344,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "890a2ec7-affe-4d97-bfc4-ce08502a23f6",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1360,
+        320
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "n8n credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "bda9ce4c-9013-4348-86a0-e70d7376421e",
+      "name": "Reply With Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1712,
+        112
+      ],
+      "webhookId": "fea26572-3201-40e0-8245-44524ae702af",
+      "credentials": {
+        "telegramApi": {
+          "id": "p62yvUnqpIVPoXOx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "labelsMode": "array",
+        "labelsArray": "={{ $('Analyze Data').item.json.chart_labels }}",
+        "data": "={{ $('Analyze Data').item.json.chart_values }}",
+        "chartOptions": {
+          "height": 400,
+          "width": 600
+        },
+        "datasetOptions": {
+          "label": "Missing values per column"
+        }
+      },
+      "id": "7224c3d6-6fea-43ae-a4b5-a8b40fd1d976",
+      "name": "Build Chart",
+      "type": "n8n-nodes-base.quickChart",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "Data quality chart: missing values per column",
+          "fileName": "data-quality-chart.png"
+        }
+      },
+      "id": "13beaf6d-5c40-4a62-aec9-db0bde4eb0e5",
+      "name": "Reply With Chart",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        112
+      ],
+      "webhookId": "4400d8ce-623f-40b1-a18a-0609ba1e848e",
+      "credentials": {
+        "telegramApi": {
+          "id": "p62yvUnqpIVPoXOx",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Document": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask For File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Is CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is CSV": {
+      "main": [
+        [
+          {
+            "node": "Parse CSV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CSV": {
+      "main": [
+        [
+          {
+            "node": "Analyze Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Excel": {
+      "main": [
+        [
+          {
+            "node": "Analyze Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Reply With Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply With Summary": {
+      "main": [
+        [
+          {
+            "node": "Build Chart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Chart": {
+      "main": [
+        [
+          {
+            "node": "Reply With Chart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask For File": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "766483e8-d1df-45bc-8237-171c669a4dd7",
+  "meta": {
+    "instanceId": "39504b0c36ce4b2972ba7742fa1ee2a8b8f69da7dcf2eca467318d7318591c3a"
+  },
+  "nodeGroups": [],
+  "id": "NyImgcgarcjJAPC3",
+  "tags": []
+}
